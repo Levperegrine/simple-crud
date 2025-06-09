@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pasien;
 use Illuminate\Http\Request;
 use App\Models\Pekerjaan;
-use App\Models\Desa;
+use \App\Models\Provinsi;
 use Illuminate\Support\Facades\Storage;
 
 class PasienController extends Controller
@@ -21,7 +21,7 @@ class PasienController extends Controller
     public function create()
     {
         $pekerjaans = Pekerjaan::all();
-        $provinsis = \App\Models\Provinsi::all();
+        $provinsis = Provinsi::all();
         return view('pasien.create', compact('pekerjaans', 'provinsis'));
     }
 
@@ -55,9 +55,11 @@ class PasienController extends Controller
 
     public function edit(Pasien $pasien)
     {
+        $pasien->load('desa.kecamatan.kota.provinsi');
         $pekerjaans = Pekerjaan::all();
-        $desas = Desa::with('kecamatan.kota.provinsi')->get();
-        return view('pasien.edit', compact('pasien', 'pekerjaans', 'desas'));
+        $provinsis = Provinsi::all();
+
+        return view('pasien.edit', compact('pasien', 'pekerjaans', 'provinsis'));
     }
 
     public function update(Request $request, Pasien $pasien)
@@ -77,6 +79,14 @@ class PasienController extends Controller
         $validated['foto_pasien'] = $request->file('foto_pasien')->store('foto_pasien', 'public');
     }
 
+    if ($request->hasFile('foto_pasien')) {
+        // Hapus foto lama jika ada
+        if ($pasien->foto_pasien) {
+            Storage::disk('public')->delete($pasien->foto_pasien);
+        }
+
+        $validated['foto_pasien'] = $request->file('foto_pasien')->store('foto_pasien', 'public');
+    }
     $pasien->update($validated);
 
     return redirect()->route('pasien.index')->with('success', 'Data pasien berhasil diperbarui.');
